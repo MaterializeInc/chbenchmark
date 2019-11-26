@@ -18,25 +18,42 @@ limitations under the License.
 #include <chrono>
 #include "timing.h"
 
-std::vector<std::string>
+/**
+ * Return a created/all pair
+ *
+ * - .first will be the results that were returned by `CREATE SOURCES LIKE`
+ * - .second will be the results that were returned by `SHOW SOURCES LIKE`
+ */
+std::pair<std::vector<std::string>, std::vector<std::string>>
 mz::createAllSources(pqxx::connection &c, std::string from, std::string registry, std::optional<std::string> like) {
-    std::vector<std::string> results;
+    std::vector<std::string> createdResults;
     pqxx::nontransaction w(c);
     from = c.quote(from);
     registry = c.quote(registry);
     auto realLike = c.quote(like ? like.value() : std::string("%"));
-    w.exec("CREATE SOURCES LIKE " + realLike + " FROM " + from + " USING SCHEMA REGISTRY " + registry);
+    auto pqResult = w.exec("CREATE SOURCES LIKE " + realLike + " FROM " + from + " USING SCHEMA REGISTRY " + registry);
+    auto cols = pqResult.columns();
+    if (cols != 1) {
+        throw UnexpectedCreateSourcesResult {"Wrong number of columns: " + std::to_string(cols)};
+    }
+    // TODO -- assert that the column is a string.
+    createdResults.reserve(pqResult.size());
+    for (const auto& row: pqResult) {
+        createdResults.push_back(row[0].as<std::string>());
+    }
+
+    std::vector<std::string> allSources;
     auto pqResult = w.exec("SHOW SOURCES LIKE " + realLike);
     auto cols = pqResult.columns();
     if (cols != 1) {
         throw UnexpectedCreateSourcesResult {"Wrong number of columns: " + std::to_string(cols)};
     }
     // TODO -- assert that the column is a string.
-    results.reserve(pqResult.size());
+    allSources.reserve(pqResult.size());
     for (const auto& row: pqResult) {
-        results.push_back(row[0].as<std::string>());
+        allSources.push_back(row[0].as<std::string>());
     }
-    return results;
+    return std::make_pair(createdResults, allResults);
 }
 
 void mz::createMaterializedView(pqxx::connection& c, const std::string &name, const std::string &query) {

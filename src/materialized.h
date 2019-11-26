@@ -47,7 +47,7 @@ struct PeekResults {
     pqxx::result inner;
 };
 
-std::vector<std::string> createAllSources(
+std::pair<std::vector<std::string>, std::vector<std::string>> createAllSources(
         pqxx::connection& c,
         std::string from,
         std::string registry,
