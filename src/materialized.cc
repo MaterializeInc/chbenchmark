@@ -76,8 +76,18 @@ mz::PeekResults mz::peekView(pqxx::connection &c, const std::string &name, const
         pqxx::nontransaction w(c);
         return w.exec(query);
     });
+
+    // the choice of strlen is random,
+    // we just need to do some processing to prove that the "wait for the data"
+    // step isn't optimized out.
+    uint64_t total_len = 0;
+    for (const auto& row: results) {
+        for (const auto& field: row) {
+            total_len += strlen(field.c_str());
+        }
+    }
     
-    return {time, results};
+    return {time, results, total_len};
 }
 
 const char *mz::UnexpectedCreateSourcesResult::what() const noexcept {

@@ -45,6 +45,7 @@ struct ViewDefinition {
 struct PeekResults {
     std::chrono::nanoseconds latency;
     pqxx::result inner;
+    uint64_t total_len; // [BTV] this is for debugging purposes, remove it
 };
 
 std::vector<std::string> createAllSources(

@@ -120,9 +120,11 @@ static void peekThread(const mz::Config* pConfig, const std::atomic<RunState> *p
     assert(!config.hQueries.empty());
     size_t iQuery = 0;
     size_t size = config.hQueries.size();
+    uint64_t total_total_len = 0;
     while (runState == RunState::warmup) {
         const auto& q = config.hQueries[iQuery];
-        mz::peekView(c, q.first, q.second.order, q.second.limit);
+        auto [_, __, total_len] = mz::peekView(c, q.first, q.second.order, q.second.limit);
+        total_total_len += total_len;
         iQuery = (iQuery + 1) % size;
         auto sleepTime = chRandom::uniformInt(sleepMin, sleepMax);
         usleep(sleepTime);
@@ -138,6 +140,7 @@ static void peekThread(const mz::Config* pConfig, const std::atomic<RunState> *p
         usleep(sleepTime);
     }
     promHist.set_value(std::move(hists));
+    printf("%lu\n", total_total_len);
 }
 
 static void flushThread(useconds_t sleepTime, const std::atomic<RunState> *pRunState) {
